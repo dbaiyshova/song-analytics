@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from src.musicbrainz_client import (
     search_artist,
@@ -10,7 +12,8 @@ from src.lyrics_client import get_lyrics
 
 
 from src.analytics import (
-    calculate_basic_metrics
+    calculate_basic_metrics,
+    get_top_words
 )
 
 
@@ -169,6 +172,52 @@ if artist_name:
                     "Vocabulary Richness %",
                     metrics["richness"]
                 )
+
+                st.subheader(
+                    "Top 10 Words"
+                )
+
+                top_words = get_top_words(
+                    lyrics
+                )
+
+                top_words_df = pd.DataFrame(
+                    top_words,
+                    columns=[
+                        "Word",
+                        "Count"
+                    ]
+                )
+
+                st.dataframe(
+                    top_words_df,
+                    use_container_width=True
+                )
+
+                fig, ax = plt.subplots()
+
+                ax.bar(
+                    top_words_df["Word"],
+                    top_words_df["Count"]
+                )
+
+                ax.set_title(
+                    "Top 10 Most Frequent Words"
+                )
+
+                ax.set_xlabel(
+                    "Word"
+                )
+
+                ax.set_ylabel(
+                    "Frequency"
+                )
+
+                plt.xticks(
+                    rotation=45
+                )
+
+                st.pyplot(fig)
 
             else:
 
