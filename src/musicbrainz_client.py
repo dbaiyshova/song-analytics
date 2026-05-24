@@ -44,3 +44,28 @@ def get_artist_releases(artist_id):
     response.raise_for_status()
 
     return response.json()
+
+
+
+def get_release_tracks(release_id):
+
+    url = (
+        f"{BASE_URL}/release/{release_id}"
+    )
+
+    params = {
+        "fmt": "json",
+        "inc": "recordings"
+    }
+
+    response = requests.get(
+        url,
+        params=params,
+        headers={
+            "User-Agent": "song-analytics/1.0"
+        }
+    )
+
+    response.raise_for_status()
+
+    return response.json()

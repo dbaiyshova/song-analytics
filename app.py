@@ -2,7 +2,8 @@ import streamlit as st
 
 from src.musicbrainz_client import (
     search_artist,
-    get_artist_releases
+    get_artist_releases,
+    get_release_tracks
 )
 
 from src.lyrics_client import get_lyrics
@@ -84,6 +85,39 @@ if artist_name:
             selected_album
         ]
 
+        track_data = get_release_tracks(
+            selected_release["id"]
+        )
+
+        media = track_data.get(
+            "media",
+            []
+        )
+
+        tracks = []
+
+        if media:
+            tracks = media[0].get(
+                "tracks",
+                []
+            )
+
+        if tracks:
+
+            song_titles = [
+                track["title"]
+                for track in tracks
+            ]
+
+            selected_song = st.selectbox(
+                "Choose a song",
+                song_titles
+            )
+
+            st.write(
+                f"Selected Song: {selected_song}"
+            )
+        
         st.write(
             f"Selected Album: {selected_album}"
         )
