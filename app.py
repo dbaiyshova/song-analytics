@@ -9,6 +9,11 @@ from src.musicbrainz_client import (
 from src.lyrics_client import get_lyrics
 
 
+from src.analytics import (
+    calculate_basic_metrics
+)
+
+
 st.set_page_config(
     page_title="Song Analytics",
     page_icon="🎵"
@@ -137,6 +142,32 @@ if artist_name:
                     "Lyrics",
                     lyrics,
                     height=400
+                )
+
+
+                metrics = calculate_basic_metrics(
+                    lyrics
+                )
+
+                st.subheader(
+                    "Song Analytics"
+                )
+
+                col1, col2, col3 = st.columns(3)
+
+                col1.metric(
+                    "Total Words",
+                    metrics["total_words"]
+                )
+
+                col2.metric(
+                    "Unique Words",
+                    metrics["unique_words"]
+                )
+
+                col3.metric(
+                    "Vocabulary Richness %",
+                    metrics["richness"]
                 )
 
             else:
