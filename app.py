@@ -27,10 +27,12 @@ st.set_page_config(
     page_icon="🎵"
 )
 
-st.title("🎵 Song Analytics")
+st.title("🎵 Song Analytics Dashboard")
 
-artist_name = st.text_input(
-    "Enter artist name"
+st.sidebar.header("Search")
+
+artist_name = st.sidebar.text_input(
+    "Artist name"
 )
 
 if artist_name:
@@ -89,7 +91,7 @@ if artist_name:
 
             album_map[label] = release
 
-        selected_album = st.selectbox(
+        selected_album = st.sidebar.selectbox(
             "Choose an album",
             list(album_map.keys())
         )
@@ -122,7 +124,7 @@ if artist_name:
                 for track in tracks
             ]
 
-        selected_song = st.selectbox(
+        selected_song = st.sidebar.selectbox(
             "Choose a song",
             song_titles
         )
@@ -135,6 +137,7 @@ if artist_name:
             f"Selected Album: {selected_album}"
         )
 
+        st.markdown("---")
         st.subheader("Lyrics")
 
         if tracks:
@@ -157,9 +160,8 @@ if artist_name:
                     lyrics
                 )
 
-                st.subheader(
-                    "Song Analytics"
-                )
+                st.markdown("---")
+                st.subheader("Song Analytics")
 
                 col1, col2, col3 = st.columns(3)
 
