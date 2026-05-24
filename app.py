@@ -35,10 +35,24 @@ st.set_page_config(
 # ======================
 # SIMPLE ACCESS CONTROL
 # ======================
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-password = st.text_input("Enter access code", type="password")
 
-if password != st.secrets["APP_PASSWORD"]:
+if not st.session_state.authenticated:
+
+    password = st.text_input(
+        "Enter access code",
+        type="password"
+    )
+
+    if password == st.secrets["APP_PASSWORD"]:
+        st.session_state.authenticated = True
+        st.rerun()
+
+    elif password:
+        st.error("Wrong password")
+
     st.stop()
 
 

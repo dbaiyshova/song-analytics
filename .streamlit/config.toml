@@ -3,3 +3,10 @@ primaryColor = "#530fe6"
 backgroundColor = "#0e1117"
 secondaryBackgroundColor = "#262730"
 textColor = "#ffffff"
+
+
+[client]
+toolbarMode = "viewer"
+
+[ui]
+hideTopBar = true
