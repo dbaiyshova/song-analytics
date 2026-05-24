@@ -23,6 +23,29 @@ st.set_page_config(
     page_title="Song Analytics",
     page_icon="🎵"
 )
+# ======================
+# PAGE CONFIG
+# ======================
+
+st.set_page_config(
+    page_title="Song Analytics",
+    page_icon="🎵"
+)
+
+# ======================
+# SIMPLE ACCESS CONTROL
+# ======================
+
+password = st.text_input("Enter access code", type="password")
+
+if password != st.secrets["APP_PASSWORD"]:
+    st.stop()
+
+
+st.set_page_config(
+    page_title="Song Analytics",
+    page_icon="🎵"
+)
 
 st.title("🎵 Song Analytics Dashboard")
 
