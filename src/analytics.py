@@ -90,3 +90,25 @@ def clean_text(text):
     text = re.sub(r"\s+", " ", text).strip()
 
     return text
+
+
+
+
+def get_artist_summary(releases):
+
+    if not releases:
+        return None
+
+    total_albums = len(releases)
+
+    dates = [
+        r.get("date")
+        for r in releases
+        if r.get("date")
+    ]
+
+    return {
+        "total_albums": total_albums,
+        "oldest_release": min(dates),
+        "newest_release": max(dates)
+    }

@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 
 from src.musicbrainz_client import (
     search_artist,
@@ -11,15 +10,13 @@ from src.musicbrainz_client import (
 
 from src.lyrics_client import get_lyrics
 
-
 from src.analytics import (
     calculate_basic_metrics,
-    get_top_words
+    get_top_words,
+    get_artist_summary
 )
 
-
-st.cache_data.clear()
-
+from wordcloud import WordCloud
 
 
 st.set_page_config(
@@ -29,11 +26,15 @@ st.set_page_config(
 
 st.title("🎵 Song Analytics Dashboard")
 
+
+# ======================
+# SIDEBAR INPUTS
+# ======================
+
 st.sidebar.header("Search")
 
-artist_name = st.sidebar.text_input(
-    "Artist name"
-)
+artist_name = st.sidebar.text_input("Artist name")
+
 
 if artist_name:
 
@@ -41,219 +42,213 @@ if artist_name:
 
     artists = data.get("artists", [])
 
-    if artists:
+    if not artists:
+        st.warning("No artists found.")
+        st.stop()
 
-        artist = artists[0]
+    artist = artists[0]
 
-        st.subheader("Artist")
+    st.subheader("Artist Overview")
 
-        st.write(
-            f"**Name:** {artist.get('name')}"
-        )
+    st.write(f"**Name:** {artist.get('name')}")
 
-        artist_id = artist["id"]
+    # ======================
+    # RELEASES
+    # ======================
 
-        releases_data = get_artist_releases(
-            artist_id
-        )
+    artist_id = artist["id"]
 
-        releases = [
-            release
-            for release in releases_data.get(
-                "releases",
-                []
-            )
-            if release.get("date")
-        ]
+    releases_data = get_artist_releases(artist_id)
 
-        releases = sorted(
-            releases,
-            key=lambda x: x["date"]
-        )
+    releases = [
+        r for r in releases_data.get("releases", [])
+        if r.get("date")
+    ]
 
-        st.subheader("Album Selection")
+    releases = sorted(releases, key=lambda x: x["date"])
 
-        album_map = {}
 
-        for release in releases:
+    # ======================
+    # ARTIST SUMMARY
+    # ======================
 
-            title = release.get(
-                "title",
-                "Unknown"
-            )
+    summary = get_artist_summary(releases)
 
-            date = release.get(
-                "date",
-                "Unknown"
-            )
+    if summary:
 
-            label = f"{date} | {title}"
+        col1, col2, col3 = st.columns(3)
 
-            album_map[label] = release
+        col1.metric("Total Albums", summary["total_albums"])
+        col2.metric("Oldest Release", summary["oldest_release"])
+        col3.metric("Newest Release", summary["newest_release"])
 
-        selected_album = st.sidebar.selectbox(
-            "Choose an album",
-            list(album_map.keys())
-        )
 
-        selected_release = album_map[
-            selected_album
-        ]
+    # ======================
+    # ALBUM TIMELINE
+    # ======================
 
-        track_data = get_release_tracks(
-            selected_release["id"]
-        )
+    st.subheader("Album Timeline")
 
-        media = track_data.get(
-            "media",
-            []
-        )
+    df = pd.DataFrame(releases)
 
-        tracks = []
+    df = df.dropna(subset=["date"])
 
-        if media:
-            tracks = media[0].get(
-                "tracks",
-                []
-            )
+    df["year"] = df["date"].str[:4]
 
-        if tracks:
+    year_counts = df["year"].value_counts().sort_index()
 
-            song_titles = [
-                track["title"]
-                for track in tracks
-            ]
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        year_counts.index,
+        year_counts.values,
+        marker="o"
+    )
+
+    ax.set_title("Albums per Year")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Number of Albums")
+
+    st.pyplot(fig)
+
+
+    # ======================
+    # ALBUM DROPDOWN
+    # ======================
+
+    st.subheader("Album Selection")
+
+    album_map = {}
+
+    for release in releases:
+
+        label = f"{release.get('date')} | {release.get('title')}"
+
+        album_map[label] = release
+
+    selected_album = st.sidebar.selectbox(
+        "Choose an album",
+        list(album_map.keys())
+    )
+
+    selected_release = album_map[selected_album]
+
+
+    # ======================
+    # TRACKS
+    # ======================
+
+    track_data = get_release_tracks(selected_release["id"])
+
+    media = track_data.get("media", [])
+
+    tracks = []
+
+    if media:
+        tracks = media[0].get("tracks", [])
+
+
+    # ======================
+    # SONG DROPDOWN
+    # ======================
+
+    selected_song = None
+
+    if tracks:
+
+        song_titles = [t["title"] for t in tracks]
 
         selected_song = st.sidebar.selectbox(
             "Choose a song",
             song_titles
         )
 
-        st.write(
-            f"Selected Song: {selected_song}"
+        st.write(f"Selected Song: {selected_song}")
+
+
+    # ======================
+    # LYRICS
+    # ======================
+
+    st.markdown("---")
+    st.subheader("Lyrics")
+
+    if selected_song:
+
+        lyrics = get_lyrics(
+            artist.get("name"),
+            selected_song
         )
-        
-        st.write(
-            f"Selected Album: {selected_album}"
-        )
 
-        st.markdown("---")
-        st.subheader("Lyrics")
+        if lyrics:
 
-        if tracks:
-
-            lyrics = get_lyrics(
-                artist.get("name"),
-                selected_song
+            st.text_area(
+                "Lyrics",
+                lyrics,
+                height=400
             )
 
-            if lyrics:
 
-                st.text_area(
-                    "Lyrics",
-                    lyrics,
-                    height=400
-                )
+            # ======================
+            # ANALYTICS
+            # ======================
 
+            st.subheader("Analytics")
 
-                metrics = calculate_basic_metrics(
-                    lyrics
-                )
+            metrics = calculate_basic_metrics(lyrics)
 
-                st.markdown("---")
-                st.subheader("Song Analytics")
+            col1, col2, col3 = st.columns(3)
 
-                col1, col2, col3 = st.columns(3)
-
-                col1.metric(
-                    "Total Words",
-                    metrics["total_words"]
-                )
-
-                col2.metric(
-                    "Unique Words",
-                    metrics["unique_words"]
-                )
-
-                col3.metric(
-                    "Vocabulary Richness %",
-                    metrics["richness"]
-                )
-
-                st.subheader(
-                    "Top 10 Words"
-                )
-
-                top_words = get_top_words(
-                    lyrics
-                )
-
-                top_words_df = pd.DataFrame(
-                    top_words,
-                    columns=[
-                        "Word",
-                        "Count"
-                    ]
-                )
-
-                st.dataframe(
-                    top_words_df,
-                    use_container_width=True
-                )
-
-                fig, ax = plt.subplots()
-
-                ax.bar(
-                    top_words_df["Word"],
-                    top_words_df["Count"]
-                )
-
-                ax.set_title(
-                    "Top 10 Most Frequent Words"
-                )
-
-                ax.set_xlabel(
-                    "Word"
-                )
-
-                ax.set_ylabel(
-                    "Frequency"
-                )
-
-                plt.xticks(
-                    rotation=45
-                )
-
-                st.pyplot(fig)
+            col1.metric("Total Words", metrics["total_words"])
+            col2.metric("Unique Words", metrics["unique_words"])
+            col3.metric("Vocabulary %", metrics["richness"])
 
 
-                st.subheader("Word Cloud")
+            # ======================
+            # TOP WORDS
+            # ======================
 
-                words_text = " ".join(
-                    word for word, _ in top_words
-                )
+            st.subheader("Top Words")
 
-                wordcloud = WordCloud(
-                    width=800,
-                    height=400,
-                    background_color="white"
-                ).generate(words_text)
+            top_words = get_top_words(lyrics)
 
-                fig_wc, ax_wc = plt.subplots()
+            df_words = pd.DataFrame(
+                top_words,
+                columns=["Word", "Count"]
+            )
 
-                ax_wc.imshow(wordcloud, interpolation="bilinear")
+            st.dataframe(df_words, use_container_width=True)
 
-                ax_wc.axis("off")
+            fig2, ax2 = plt.subplots()
 
-                st.pyplot(fig_wc)
+            ax2.bar(df_words["Word"], df_words["Count"])
 
-            else:
+            plt.xticks(rotation=45)
 
-                st.info(
-                    "Lyrics not found for this song."
-                )
+            st.pyplot(fig2)
 
-    else:
-        st.warning(
-            "No artists found."
-        )
+
+            # ======================
+            # WORD CLOUD
+            # ======================
+
+            st.subheader("Word Cloud")
+
+            words_text = " ".join([w for w, _ in top_words])
+
+            wordcloud = WordCloud(
+                width=800,
+                height=400,
+                background_color="white"
+            ).generate(words_text)
+
+            fig_wc, ax_wc = plt.subplots()
+
+            ax_wc.imshow(wordcloud, interpolation="bilinear")
+
+            ax_wc.axis("off")
+
+            st.pyplot(fig_wc)
+
+        else:
+            st.info("Lyrics not found for this song.")
