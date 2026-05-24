@@ -3,6 +3,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import os
 
+
 from dotenv import load_dotenv
 
 
@@ -34,8 +35,6 @@ def get_client():
         auth_manager=auth_manager
     )
 
-
-from rapidfuzz import fuzz
 
 
 def search_track_spotify(artist, track):
@@ -87,3 +86,30 @@ def search_track_spotify(artist, track):
         return None
 
     return best
+
+
+
+def search_album_spotify(
+    artist,
+    album
+):
+
+    sp = get_client()
+
+    query = (
+        f"album:{album} "
+        f"artist:{artist}"
+    )
+
+    results = sp.search(
+        q=query,
+        type="album",
+        limit=1
+    )
+
+    albums = results["albums"]["items"]
+
+    if not albums:
+        return None
+
+    return albums[0]
