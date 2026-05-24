@@ -4,10 +4,9 @@ from collections import Counter
 
 def calculate_basic_metrics(lyrics):
 
-    words = re.findall(
-        r"\b[a-zA-Z]+\b",
-        lyrics.lower()
-    )
+    lyrics = clean_text(lyrics)
+
+    words = lyrics.split()
 
     total_words = len(words)
 
@@ -38,10 +37,9 @@ def get_top_words(
     limit=10
 ):
 
-    words = re.findall(
-        r"\b[a-zA-Z]+\b",
-        lyrics.lower()
-    )
+    lyrics = clean_text(lyrics)
+
+    words = lyrics.split()
 
     stop_words = {
         "the",
@@ -77,3 +75,18 @@ def get_top_words(
     return counter.most_common(
         limit
     )
+
+
+
+def clean_text(text):
+
+    text = text.lower()
+
+    text = re.sub(r"\[.*?\]", " ", text)
+    text = re.sub(r"\(.*?\)", " ", text)
+
+    text = re.sub(r"[^a-z\s]", " ", text)
+
+    text = re.sub(r"\s+", " ", text).strip()
+
+    return text
