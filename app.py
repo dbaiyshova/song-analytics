@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
 from src.musicbrainz_client import (
     search_artist,
     get_artist_releases,
@@ -11,6 +12,8 @@ from src.musicbrainz_client import (
 from src.spotify_client import (
     search_album_spotify
 )
+
+from src.spotify_client import get_client
 
 from src.song_service import build_song_object
 from src.analytics import get_artist_summary
@@ -33,80 +36,11 @@ st.set_page_config(
 
 
 # ======================
-# ARTIST CARD
-# ======================
-
-def render_artist_card(spotify_artist):
-
-    if not spotify_artist:
-        return
-
-    st.subheader("🎧 Spotify Artist Profile")
-
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-
-        if spotify_artist.get("image"):
-            st.image(
-                spotify_artist["image"],
-                width=250
-            )
-
-    with col2:
-
-        st.markdown(
-            f"## {spotify_artist['name']}"
-        )
-
-        st.write(
-            f"**Followers:** "
-            f"{spotify_artist['followers']:,}"
-        )
-
-        popularity = spotify_artist.get(
-            "popularity",
-            0
-        )
-
-        st.write(
-            f"**Popularity:** {popularity}/100"
-        )
-
-        st.progress(
-            popularity / 100
-        )
-
-        genres = spotify_artist.get(
-            "genres",
-            []
-        )
-
-        if genres:
-
-            st.write(
-                "**Genres:** "
-                + ", ".join(genres[:5])
-            )
-
-        spotify_url = spotify_artist.get(
-            "spotify_url"
-        )
-
-        if spotify_url:
-
-            st.markdown(
-                f"[Open Artist In Spotify]({spotify_url})"
-            )
-
-
-# ======================
 # AUTH
 # ======================
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
-
 
 if not st.session_state.authenticated:
 
@@ -133,46 +67,83 @@ st.title("🎵 Song Analytics Dashboard")
 
 
 # ======================
+# ARTIST CARD
+# ======================
+
+def render_artist_card(spotify_artist):
+
+    if not spotify_artist:
+        return
+
+    st.subheader("🎧 Spotify Artist Profile")
+
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        if spotify_artist.get("image"):
+            st.image(spotify_artist["image"], width=250)
+
+    with col2:
+
+        st.markdown(f"## {spotify_artist.get('name', 'Unknown')}")
+
+        st.write(
+            f"**Followers:** {spotify_artist.get('followers', 0):,}"
+        )
+
+        popularity = spotify_artist.get("popularity", 0)
+
+        st.write(f"**Popularity:** {popularity}/100")
+        st.progress(popularity / 100)
+
+        genres = spotify_artist.get("genres", [])
+        if genres:
+            st.write("**Genres:** " + ", ".join(genres[:5]))
+
+        url = spotify_artist.get("spotify_url")
+        if url:
+            st.markdown(f"[Open Artist In Spotify]({url})")
+
+
+# ======================
 # SIDEBAR
 # ======================
 
 st.sidebar.header("Search")
 
-artist_name = st.sidebar.text_input(
-    "Artist name"
-)
+artist_name = st.sidebar.text_input("Artist name")
 
 
 if artist_name:
 
-    data = search_artist(
-        artist_name
-    )
-
-    artists = data.get(
-        "artists",
-        []
-    )
+    # ----------------------
+    # MUSICBRAINZ ARTIST
+    # ----------------------
+    data = search_artist(artist_name)
+    artists = data.get("artists", [])
 
     if not artists:
-
-        st.warning(
-            "No artists found."
-        )
-
+        st.warning("No artists found.")
         st.stop()
 
     artist = artists[0]
 
-    spotify_artist = (
-        search_artist_spotify(
-            artist.get("name")
-        )
-    )
+#temp s
+    sp = get_client()
+    st.write("Spotify client OK:", sp is not None)
+#temp e
+    # ----------------------
+    # SPOTIFY ARTIST (SAFE)
+    # ----------------------
+    try:
+        spotify_artist = search_artist_spotify(artist.get("name"))
+    except Exception as e:
+        st.error(f"Spotify error: {e}")
+        spotify_artist = None
 
-    render_artist_card(
-        spotify_artist
-    )
+    st.write("Spotify artist loaded:", spotify_artist is not None)
+
+    render_artist_card(spotify_artist)
 
 
     # ======================
@@ -181,192 +152,119 @@ if artist_name:
 
     artist_id = artist["id"]
 
-    releases_data = get_artist_releases(
-        artist_id
-    )
+    releases_data = get_artist_releases(artist_id)
 
     releases = [
-        r
-        for r in releases_data.get(
-            "releases",
-            []
-        )
+        r for r in releases_data.get("releases", [])
         if r.get("date")
     ]
 
-    releases = sorted(
-        releases,
-        key=lambda x: x["date"]
-    )
+    releases = sorted(releases, key=lambda x: x["date"])
 
 
     # ======================
     # SUMMARY
     # ======================
 
-    summary = get_artist_summary(
-        releases
-    )
+    summary = get_artist_summary(releases)
 
     if summary:
-
-        st.subheader(
-            "Artist Overview"
-        )
+        st.subheader("Artist Overview")
 
         col1, col2, col3 = st.columns(3)
 
-        col1.metric(
-            "Total Albums",
-            summary["total_albums"]
-        )
-
-        col2.metric(
-            "Oldest Release",
-            summary["oldest_release"]
-        )
-
-        col3.metric(
-            "Newest Release",
-            summary["newest_release"]
-        )
+        col1.metric("Total Albums", summary["total_albums"])
+        col2.metric("Oldest Release", summary["oldest_release"])
+        col3.metric("Newest Release", summary["newest_release"])
 
 
     # ======================
     # TIMELINE
     # ======================
 
-    st.subheader(
-        "Album Timeline"
-    )
+    st.subheader("Album Timeline")
 
     df = pd.DataFrame(releases)
 
-    df = df.dropna(
-        subset=["date"]
-    )
+    if not df.empty:
 
-    df["year"] = (
-        df["date"]
-        .astype(str)
-        .str[:4]
-    )
+        df = df.dropna(subset=["date"])
+        df["year"] = df["date"].astype(str).str[:4]
 
-    year_counts = (
-        df["year"]
-        .value_counts()
-        .sort_index()
-    )
+        year_counts = df["year"].value_counts().sort_index()
 
-    fig, ax = plt.subplots()
+        fig, ax = plt.subplots()
+        ax.plot(year_counts.index, year_counts.values, marker="o")
+        ax.set_title("Albums per Year")
+        ax.set_xlabel("Year")
+        ax.set_ylabel("Number of Albums")
 
-    ax.plot(
-        year_counts.index,
-        year_counts.values,
-        marker="o"
-    )
-
-    ax.set_title(
-        "Albums per Year"
-    )
-
-    ax.set_xlabel("Year")
-
-    ax.set_ylabel(
-        "Number of Albums"
-    )
-
-    st.pyplot(fig)
+        st.pyplot(fig)
 
 
     # ======================
     # ALBUM SELECT
     # ======================
 
-    st.subheader(
-        "Album Selection"
-    )
+    st.subheader("Album Selection")
 
     album_map = {}
 
     for release in releases:
-
-        label = (
-            f"{release.get('date')} | "
-            f"{release.get('title')}"
-        )
-
+        label = f"{release.get('date')} | {release.get('title')}"
         album_map[label] = release
 
-    selected_album = (
-        st.sidebar.selectbox(
-            "Choose an album",
-            list(album_map.keys())
+    if not album_map:
+        st.stop()
+
+    selected_album = st.sidebar.selectbox(
+        "Choose an album",
+        list(album_map.keys())
+    )
+
+    selected_release = album_map[selected_album]
+
+
+    # ----------------------
+    # SPOTIFY ALBUM
+    # ----------------------
+    try:
+        spotify_album = search_album_spotify(
+            artist.get("name"),
+            selected_release.get("title")
         )
-    )
+    except Exception as e:
+        st.error(f"Spotify album error: {e}")
+        spotify_album = None
 
-    selected_release = (
-        album_map[selected_album]
-    )
+    st.write("Spotify album loaded:", spotify_album is not None)
 
-    spotify_album = search_album_spotify(
-        artist.get("name"),
-        selected_release.get("title")
-    )
+    if spotify_album and spotify_album.get("images"):
+        st.image(spotify_album["images"][0]["url"], width=300)
 
-    if (
-        spotify_album
-        and spotify_album.get("images")
-    ):
-        st.image(
-            spotify_album["images"][0]["url"],
-            width=300
-        )
 
     # ======================
     # TRACKS
     # ======================
 
-    track_data = (
-        get_release_tracks(
-            selected_release["id"]
-        )
-    )
+    track_data = get_release_tracks(selected_release["id"])
 
-    media = track_data.get(
-        "media",
-        []
-    )
+    media = track_data.get("media", [])
+    tracks = media[0].get("tracks", []) if media else []
 
-    tracks = []
-
-    if media:
-
-        tracks = media[0].get(
-            "tracks",
-            []
-        )
 
     selected_song = None
 
     if tracks:
 
-        song_titles = [
-            t["title"]
-            for t in tracks
-        ]
+        song_titles = [t["title"] for t in tracks]
 
-        selected_song = (
-            st.sidebar.selectbox(
-                "Choose a song",
-                song_titles
-            )
+        selected_song = st.sidebar.selectbox(
+            "Choose a song",
+            song_titles
         )
 
-        st.write(
-            f"Selected Song: "
-            f"{selected_song}"
-        )
+        st.write(f"Selected Song: {selected_song}")
 
 
     # ======================
@@ -380,17 +278,9 @@ if artist_name:
             selected_song
         )
 
-        lyrics = song_data.get(
-            "lyrics"
-        )
-
-        analytics = song_data.get(
-            "analytics"
-        )
-
-        spotify = song_data.get(
-            "spotify"
-        )
+        lyrics = song_data.get("lyrics")
+        analytics = song_data.get("analytics")
+        spotify = song_data.get("spotify")
 
         st.markdown("---")
 
@@ -401,53 +291,26 @@ if artist_name:
 
         if spotify:
 
-            st.subheader(
-                "🎵 Spotify Track"
-            )
+            st.subheader("🎵 Spotify Track")
 
-            col1, col2 = st.columns(
-                [1, 2]
-            )
+            col1, col2 = st.columns([1, 2])
 
             with col1:
-
-                if spotify.get(
-                    "image"
-                ):
-                    st.image(
-                        spotify["image"]
-                    )
+                if spotify.get("image"):
+                    st.image(spotify["image"])
 
             with col2:
 
-                st.write(
-                    f"**Album:** "
-                    f"{spotify.get('album')}"
-                )
+                st.write(f"**Album:** {spotify.get('album')}")
 
-                popularity = (
-                    spotify.get(
-                        "popularity",
-                        0
-                    )
-                )
+                popularity = spotify.get("popularity", 0)
 
-                st.write(
-                    f"**Popularity:** "
-                    f"{popularity}/100"
-                )
+                st.write(f"**Popularity:** {popularity}/100")
+                st.progress(popularity / 100)
 
-                st.progress(
-                    popularity / 100
-                )
-
-                if spotify.get(
-                    "spotify_url"
-                ):
-
+                if spotify.get("spotify_url"):
                     st.markdown(
-                        f"[Open Track In Spotify]"
-                        f"({spotify['spotify_url']})"
+                        f"[Open Track In Spotify]({spotify['spotify_url']})"
                     )
 
 
@@ -458,18 +321,9 @@ if artist_name:
         st.subheader("Lyrics")
 
         if lyrics:
-
-            st.text_area(
-                "Lyrics",
-                lyrics,
-                height=400
-            )
-
+            st.text_area("Lyrics", lyrics, height=400)
         else:
-
-            st.info(
-                "Lyrics not found."
-            )
+            st.info("Lyrics not found.")
 
 
         # ======================
@@ -478,38 +332,20 @@ if artist_name:
 
         if analytics:
 
-            st.subheader(
-                "Analytics"
-            )
+            st.subheader("Analytics")
 
-            col1, col2, col3 = (
-                st.columns(3)
-            )
+            col1, col2, col3 = st.columns(3)
 
-            col1.metric(
-                "Total Words",
-                analytics[
-                    "total_words"
-                ]
-            )
+            col1.metric("Total Words", analytics["total_words"])
+            col2.metric("Unique Words", analytics["unique_words"])
+            col3.metric("Vocabulary %", analytics["richness"])
 
-            col2.metric(
-                "Unique Words",
-                analytics[
-                    "unique_words"
-                ]
-            )
 
-            col3.metric(
-                "Vocabulary %",
-                analytics[
-                    "richness"
-                ]
-            )
+            # ======================
+            # WORD CLOUD
+            # ======================
 
-            st.subheader(
-                "Word Cloud"
-            )
+            st.subheader("Word Cloud")
 
             words = lyrics.split()
 
@@ -517,19 +353,11 @@ if artist_name:
                 width=800,
                 height=400,
                 background_color="white"
-            ).generate(
-                " ".join(words)
-            )
+            ).generate(" ".join(words))
 
-            fig_wc, ax_wc = (
-                plt.subplots()
-            )
+            fig_wc, ax_wc = plt.subplots()
 
-            ax_wc.imshow(
-                wordcloud,
-                interpolation="bilinear"
-            )
-
+            ax_wc.imshow(wordcloud, interpolation="bilinear")
             ax_wc.axis("off")
 
             st.pyplot(fig_wc)

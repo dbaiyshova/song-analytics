@@ -11,22 +11,47 @@ def search_artist_spotify(artist_name):
         limit=1
     )
 
-    items = results["artists"]["items"]
+
+    items = (
+        results.get(
+            "artists",
+            {}
+        ).get(
+            "items",
+            []
+        )
+    )
 
     if not items:
         return None
 
     artist = items[0]
 
-    return {
-        "name": artist.get("name"),
+    images = artist.get(
+        "images",
+        []
+    )
 
-        "followers": artist.get(
-            "followers",
-            {}
-        ).get(
-            "total",
-            0
+    image_url = None
+
+    if images:
+        image_url = images[0].get(
+            "url"
+        )
+
+    return {
+        "name": artist.get(
+            "name"
+        ),
+
+        "followers": (
+            artist.get(
+                "followers",
+                {}
+            ).get(
+                "total",
+                0
+            )
         ),
 
         "genres": artist.get(
@@ -39,19 +64,14 @@ def search_artist_spotify(artist_name):
             0
         ),
 
-        "spotify_url": artist.get(
-            "external_urls",
-            {}
-        ).get(
-            "spotify"
+        "spotify_url": (
+            artist.get(
+                "external_urls",
+                {}
+            ).get(
+                "spotify"
+            )
         ),
 
-        "image": (
-            artist.get(
-                "images",
-                [{}]
-            )[0].get("url")
-            if artist.get("images")
-            else None
-        )
+        "image": image_url
     }

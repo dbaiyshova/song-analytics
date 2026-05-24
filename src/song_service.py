@@ -27,9 +27,6 @@ def build_song_object(artist, track):
             track
         )
 
-        print("SPOTIFY DATA:")
-        print(spotify_data)
-
     except Exception as e:
 
         print("Spotify error:")
