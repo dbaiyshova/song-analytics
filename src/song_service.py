@@ -5,28 +5,112 @@ from src.analytics import calculate_basic_metrics
 
 def build_song_object(artist, track):
 
-    # 1. Lyrics
-    lyrics = get_lyrics(artist, track)
+    # ======================
+    # LYRICS
+    # ======================
 
-    # 2. Spotify enrichment
-    spotify_data = search_track_spotify(artist, track)
+    lyrics = get_lyrics(
+        artist,
+        track
+    )
+
+    # ======================
+    # SPOTIFY
+    # ======================
+
+    spotify_data = None
+
+    try:
+
+        spotify_data = search_track_spotify(
+            artist,
+            track
+        )
+
+        print("SPOTIFY DATA:")
+        print(spotify_data)
+
+    except Exception as e:
+
+        print("Spotify error:")
+        print(e)
 
     spotify = None
 
     if spotify_data:
+
         spotify = {
-            "id": spotify_data["id"],
-            "popularity": spotify_data["popularity"],
-            "image": spotify_data["album"]["images"][0]["url"]
-            if spotify_data["album"]["images"] else None,
-            "preview_url": spotify_data.get("preview_url"),
+            "id": spotify_data.get(
+                "id"
+            ),
+
+            "title": spotify_data.get(
+                "name"
+            ),
+
+            "popularity": spotify_data.get(
+                "popularity",
+                0
+            ),
+
+            "preview_url": spotify_data.get(
+                "preview_url"
+            ),
+
+            "spotify_url": spotify_data.get(
+                "external_urls",
+                {}
+            ).get(
+                "spotify"
+            ),
+
+            "album": spotify_data.get(
+                "album",
+                {}
+            ).get(
+                "name"
+            ),
+
+            "image": (
+                spotify_data.get(
+                    "album",
+                    {}
+                )
+                .get(
+                    "images",
+                    [{}]
+                )[0]
+                .get(
+                    "url"
+                )
+            )
         }
 
-    # 3. Analytics
+    # ======================
+    # ANALYTICS
+    # ======================
+
     analytics = None
 
     if lyrics:
-        analytics = calculate_basic_metrics(lyrics)
+
+        try:
+
+            analytics = calculate_basic_metrics(
+                lyrics
+            )
+
+        except Exception as e:
+
+            print(
+                "Analytics error:"
+            )
+
+            print(e)
+
+    # ======================
+    # RETURN
+    # ======================
 
     return {
         "artist": artist,

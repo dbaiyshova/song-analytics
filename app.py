@@ -242,7 +242,18 @@ if artist_name:
             if spotify.get("image"):
                 st.image(spotify["image"])
 
-            st.write(f"**Popularity:** {spotify.get('popularity')}")
+            popularity = spotify.get(
+                "popularity",
+                0
+            )
+
+            st.write(
+                f"**Popularity:** {popularity}/100"
+            )
+
+            st.progress(
+                popularity / 100
+            )
 
 
         # ======================
