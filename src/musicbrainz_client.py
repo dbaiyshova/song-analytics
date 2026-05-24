@@ -1,8 +1,9 @@
 import requests
+import streamlit as st
 
 BASE_URL = "https://musicbrainz.org/ws/2"
 
-
+@st.cache_data
 def search_artist(name):
     url = f"{BASE_URL}/artist"
 
@@ -23,7 +24,7 @@ def search_artist(name):
 
     return response.json()
 
-
+@st.cache_data
 def get_artist_releases(artist_id):
     url = f"{BASE_URL}/release"
 
@@ -46,7 +47,7 @@ def get_artist_releases(artist_id):
     return response.json()
 
 
-
+@st.cache_data
 def get_release_tracks(release_id):
 
     url = (

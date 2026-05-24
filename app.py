@@ -18,6 +18,10 @@ from src.analytics import (
 )
 
 
+st.cache_data.clear()
+
+
+
 st.set_page_config(
     page_title="Song Analytics",
     page_icon="🎵"
