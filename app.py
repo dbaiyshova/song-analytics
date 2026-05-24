@@ -8,21 +8,13 @@ from src.musicbrainz_client import (
     get_release_tracks
 )
 
-from src.lyrics_client import get_lyrics
+from src.song_service import build_song_object
 
-from src.analytics import (
-    calculate_basic_metrics,
-    get_top_words,
-    get_artist_summary
-)
+from src.analytics import get_artist_summary
 
 from wordcloud import WordCloud
 
 
-st.set_page_config(
-    page_title="Song Analytics",
-    page_icon="🎵"
-)
 # ======================
 # PAGE CONFIG
 # ======================
@@ -32,9 +24,11 @@ st.set_page_config(
     page_icon="🎵"
 )
 
+
 # ======================
-# SIMPLE ACCESS CONTROL
+# AUTH (SECURITY)
 # ======================
+
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -56,16 +50,15 @@ if not st.session_state.authenticated:
     st.stop()
 
 
-st.set_page_config(
-    page_title="Song Analytics",
-    page_icon="🎵"
-)
+# ======================
+# TITLE
+# ======================
 
 st.title("🎵 Song Analytics Dashboard")
 
 
 # ======================
-# SIDEBAR INPUTS
+# SIDEBAR INPUT
 # ======================
 
 st.sidebar.header("Search")
@@ -88,6 +81,7 @@ if artist_name:
     st.subheader("Artist Overview")
 
     st.write(f"**Name:** {artist.get('name')}")
+
 
     # ======================
     # RELEASES
@@ -150,7 +144,7 @@ if artist_name:
 
 
     # ======================
-    # ALBUM DROPDOWN
+    # ALBUM SELECTION
     # ======================
 
     st.subheader("Album Selection")
@@ -160,7 +154,6 @@ if artist_name:
     for release in releases:
 
         label = f"{release.get('date')} | {release.get('title')}"
-
         album_map[label] = release
 
     selected_album = st.sidebar.selectbox(
@@ -186,7 +179,7 @@ if artist_name:
 
 
     # ======================
-    # SONG DROPDOWN
+    # SONG SELECTION
     # ======================
 
     selected_song = None
@@ -204,18 +197,27 @@ if artist_name:
 
 
     # ======================
-    # LYRICS
+    # SONG ENGINE (UNIFIED LAYER)
     # ======================
-
-    st.markdown("---")
-    st.subheader("Lyrics")
 
     if selected_song:
 
-        lyrics = get_lyrics(
+        song_data = build_song_object(
             artist.get("name"),
             selected_song
         )
+
+        lyrics = song_data["lyrics"]
+        analytics = song_data["analytics"]
+        spotify = song_data["spotify"]
+
+
+        # ======================
+        # LYRICS
+        # ======================
+
+        st.markdown("---")
+        st.subheader("Lyrics")
 
         if lyrics:
 
@@ -225,44 +227,37 @@ if artist_name:
                 height=400
             )
 
+        else:
+            st.info("Lyrics not found for this song.")
 
-            # ======================
-            # ANALYTICS
-            # ======================
+
+        # ======================
+        # SPOTIFY INFO
+        # ======================
+
+        if spotify:
+
+            st.subheader("Spotify Info")
+
+            if spotify.get("image"):
+                st.image(spotify["image"])
+
+            st.write(f"**Popularity:** {spotify.get('popularity')}")
+
+
+        # ======================
+        # ANALYTICS
+        # ======================
+
+        if analytics:
 
             st.subheader("Analytics")
 
-            metrics = calculate_basic_metrics(lyrics)
-
             col1, col2, col3 = st.columns(3)
 
-            col1.metric("Total Words", metrics["total_words"])
-            col2.metric("Unique Words", metrics["unique_words"])
-            col3.metric("Vocabulary %", metrics["richness"])
-
-
-            # ======================
-            # TOP WORDS
-            # ======================
-
-            st.subheader("Top Words")
-
-            top_words = get_top_words(lyrics)
-
-            df_words = pd.DataFrame(
-                top_words,
-                columns=["Word", "Count"]
-            )
-
-            st.dataframe(df_words, use_container_width=True)
-
-            fig2, ax2 = plt.subplots()
-
-            ax2.bar(df_words["Word"], df_words["Count"])
-
-            plt.xticks(rotation=45)
-
-            st.pyplot(fig2)
+            col1.metric("Total Words", analytics["total_words"])
+            col2.metric("Unique Words", analytics["unique_words"])
+            col3.metric("Vocabulary %", analytics["richness"])
 
 
             # ======================
@@ -271,21 +266,17 @@ if artist_name:
 
             st.subheader("Word Cloud")
 
-            words_text = " ".join([w for w, _ in top_words])
+            words = lyrics.split()
 
             wordcloud = WordCloud(
                 width=800,
                 height=400,
                 background_color="white"
-            ).generate(words_text)
+            ).generate(" ".join(words))
 
             fig_wc, ax_wc = plt.subplots()
 
             ax_wc.imshow(wordcloud, interpolation="bilinear")
-
             ax_wc.axis("off")
 
             st.pyplot(fig_wc)
-
-        else:
-            st.info("Lyrics not found for this song.")
