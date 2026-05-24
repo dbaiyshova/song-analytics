@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 
 from src.musicbrainz_client import (
     search_artist,
@@ -218,6 +219,27 @@ if artist_name:
                 )
 
                 st.pyplot(fig)
+
+
+                st.subheader("Word Cloud")
+
+                words_text = " ".join(
+                    word for word, _ in top_words
+                )
+
+                wordcloud = WordCloud(
+                    width=800,
+                    height=400,
+                    background_color="white"
+                ).generate(words_text)
+
+                fig_wc, ax_wc = plt.subplots()
+
+                ax_wc.imshow(wordcloud, interpolation="bilinear")
+
+                ax_wc.axis("off")
+
+                st.pyplot(fig_wc)
 
             else:
 
