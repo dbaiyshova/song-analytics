@@ -8,8 +8,6 @@ from src.musicbrainz_client import (
 from src.lyrics_client import get_lyrics
 
 
-#imports
-
 st.set_page_config(
     page_title="Song Analytics",
     page_icon="🎵"
@@ -43,14 +41,25 @@ if artist_name:
             artist_id
         )
 
-        releases = releases_data.get(
-            "releases",
-            []
+        releases = [
+            release
+            for release in releases_data.get(
+                "releases",
+                []
+            )
+            if release.get("date")
+        ]
+
+        releases = sorted(
+            releases,
+            key=lambda x: x["date"]
         )
 
-        st.subheader("Releases")
+        st.subheader("Album Selection")
 
-        for release in releases[:20]:
+        album_map = {}
+
+        for release in releases:
 
             title = release.get(
                 "title",
@@ -62,33 +71,42 @@ if artist_name:
                 "Unknown"
             )
 
-            st.write(
-                f"• {title} ({date})"
+            label = f"{date} | {title}"
+
+            album_map[label] = release
+
+        selected_album = st.selectbox(
+            "Choose an album",
+            list(album_map.keys())
+        )
+
+        selected_release = album_map[
+            selected_album
+        ]
+
+        st.write(
+            f"Selected Album: {selected_album}"
+        )
+
+        st.subheader("Lyrics Test")
+
+        lyrics = get_lyrics(
+            artist.get("name"),
+            "Yellow"
+        )
+
+        if lyrics:
+            st.text_area(
+                "Lyrics",
+                lyrics[:2000],
+                height=300
+            )
+        else:
+            st.info(
+                "Lyrics not found."
             )
 
     else:
         st.warning(
             "No artists found."
         )
-    
-    st.subheader("Lyrics Test")
-
-    lyrics = get_lyrics(
-    artist.get("name"),
-    "Yellow"
-    )
-
-    if lyrics:
-        st.text_area(
-            "Lyrics",
-            lyrics[:2000],
-            height=300
-        )
-    else:
-        st.info(
-            "Lyrics not found."
-        )
-
-
-
-
