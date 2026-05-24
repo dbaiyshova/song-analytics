@@ -109,36 +109,41 @@ if artist_name:
                 for track in tracks
             ]
 
-            selected_song = st.selectbox(
-                "Choose a song",
-                song_titles
-            )
+        selected_song = st.selectbox(
+            "Choose a song",
+            song_titles
+        )
 
-            st.write(
-                f"Selected Song: {selected_song}"
-            )
+        st.write(
+            f"Selected Song: {selected_song}"
+        )
         
         st.write(
             f"Selected Album: {selected_album}"
         )
 
-        st.subheader("Lyrics Test")
+        st.subheader("Lyrics")
 
-        lyrics = get_lyrics(
-            artist.get("name"),
-            "Yellow"
-        )
+        if tracks:
 
-        if lyrics:
-            st.text_area(
-                "Lyrics",
-                lyrics[:2000],
-                height=300
+            lyrics = get_lyrics(
+                artist.get("name"),
+                selected_song
             )
-        else:
-            st.info(
-                "Lyrics not found."
-            )
+
+            if lyrics:
+
+                st.text_area(
+                    "Lyrics",
+                    lyrics,
+                    height=400
+                )
+
+            else:
+
+                st.info(
+                    "Lyrics not found for this song."
+                )
 
     else:
         st.warning(
