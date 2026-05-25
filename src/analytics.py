@@ -10,32 +10,22 @@ def calculate_basic_metrics(lyrics):
 
     total_words = len(words)
 
-    unique_words = len(
-        set(words)
-    )
+    unique_words = len(set(words))
 
     richness = 0
 
     if total_words > 0:
 
-        richness = round(
-            unique_words
-            / total_words
-            * 100,
-            2
-        )
+        richness = round(unique_words / total_words * 100, 2)
 
     return {
         "total_words": total_words,
         "unique_words": unique_words,
-        "richness": richness
+        "richness": richness,
     }
 
 
-def get_top_words(
-    lyrics,
-    limit=10
-):
+def get_top_words(lyrics, limit=10):
 
     lyrics = clean_text(lyrics)
 
@@ -59,23 +49,14 @@ def get_top_words(
         "i",
         "you",
         "my",
-        "me"
+        "me",
     }
 
-    filtered_words = [
-        word
-        for word in words
-        if word not in stop_words
-    ]
+    filtered_words = [word for word in words if word not in stop_words]
 
-    counter = Counter(
-        filtered_words
-    )
+    counter = Counter(filtered_words)
 
-    return counter.most_common(
-        limit
-    )
-
+    return counter.most_common(limit)
 
 
 def clean_text(text):
@@ -92,8 +73,6 @@ def clean_text(text):
     return text
 
 
-
-
 def get_artist_summary(releases):
 
     if not releases:
@@ -103,24 +82,13 @@ def get_artist_summary(releases):
 
     for release in releases:
 
-        release_date = (
-            release.get("date")
-            or release.get("release_date")
-        )
+        release_date = release.get("date") or release.get("release_date")
 
         if release_date:
             dates.append(release_date)
 
     return {
         "total_albums": len(releases),
-
-        "oldest_release":
-            min(dates)
-            if dates
-            else "Unknown",
-
-        "newest_release":
-            max(dates)
-            if dates
-            else "Unknown"
+        "oldest_release": min(dates) if dates else "Unknown",
+        "newest_release": max(dates) if dates else "Unknown",
     }

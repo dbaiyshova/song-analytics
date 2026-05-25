@@ -8,28 +8,21 @@ from src.spotify_client import (
     get_artist_by_name,
     get_artist_albums,
     get_album_tracks,
-    search_album_spotify
+    search_album_spotify,
 )
 
 
 from src.song_service import build_song_object
 from src.analytics import get_artist_summary
-from src.spotify_artist_client import (
-    search_artist_spotify
-)
+from src.spotify_artist_client import search_artist_spotify
 
 from wordcloud import WordCloud
-
 
 # ======================
 # PAGE CONFIG
 # ======================
 
-st.set_page_config(
-    page_title="Song Analytics",
-    page_icon="🎵",
-    layout="wide"
-)
+st.set_page_config(page_title="Song Analytics", page_icon="🎵", layout="wide")
 
 
 # ======================
@@ -41,10 +34,7 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state.authenticated:
 
-    password = st.text_input(
-        "Enter access code",
-        type="password"
-    )
+    password = st.text_input("Enter access code", type="password")
 
     if password == st.secrets["APP_PASSWORD"]:
         st.session_state.authenticated = True
@@ -67,6 +57,7 @@ st.title("🎵 Song Analytics Dashboard")
 # ARTIST CARD
 # ======================
 
+
 def render_artist_card(spotify_artist):
 
     if not spotify_artist:
@@ -84,9 +75,7 @@ def render_artist_card(spotify_artist):
 
         st.markdown(f"## {spotify_artist.get('name', 'Unknown')}")
 
-        st.write(
-            f"**Followers:** {spotify_artist.get('followers', 0):,}"
-        )
+        st.write(f"**Followers:** {spotify_artist.get('followers', 0):,}")
 
         popularity = spotify_artist.get("popularity", 0)
 
@@ -116,20 +105,16 @@ if artist_name:
     # ----------------------
     # MUSICBRAINZ ARTIST
     # ----------------------
-    artist = get_artist_by_name(
-        artist_name
-    )
+    artist = get_artist_by_name(artist_name)
 
     if not artist:
-        st.warning(
-            "No artists found."
-        )
+        st.warning("No artists found.")
         st.stop()
 
-#temp s
+    # temp s
     sp = get_client()
     st.write("Spotify client OK:", sp is not None)
-#temp e
+    # temp e
     # ----------------------
     # SPOTIFY ARTIST (SAFE)
     # ----------------------
@@ -143,24 +128,13 @@ if artist_name:
 
     render_artist_card(spotify_artist)
 
-
     # ======================
     # RELEASES
     # ======================
 
-    releases = get_artist_albums(
-        artist["name"]
-    )
+    releases = get_artist_albums(artist["name"])
 
-    releases = sorted(
-        releases,
-        key=lambda x: x.get(
-            "release_date",
-            ""
-        ),
-        reverse=True
-    )
-
+    releases = sorted(releases, key=lambda x: x.get("release_date", ""), reverse=True)
 
     # ======================
     # SUMMARY
@@ -177,7 +151,6 @@ if artist_name:
         col2.metric("Oldest Release", summary["oldest_release"])
         col3.metric("Newest Release", summary["newest_release"])
 
-
     # ======================
     # TIMELINE
     # ======================
@@ -188,15 +161,9 @@ if artist_name:
 
     if not df.empty:
 
-        df = df.dropna(
-            subset=["release_date"]
-        )
+        df = df.dropna(subset=["release_date"])
 
-        df["year"] = (
-            df["release_date"]
-            .astype(str)
-            .str[:4]
-        )
+        df["year"] = df["release_date"].astype(str).str[:4]
 
         year_counts = df["year"].value_counts().sort_index()
 
@@ -208,7 +175,6 @@ if artist_name:
 
         st.pyplot(fig)
 
-
     # ======================
     # ALBUM SELECT
     # ======================
@@ -218,30 +184,22 @@ if artist_name:
     album_map = {}
 
     for release in releases:
-        label = (
-            f"{release.get('release_date')} | "
-            f"{release.get('name')}"
-        )
+        label = f"{release.get('release_date')} | " f"{release.get('name')}"
         album_map[label] = release
 
     if not album_map:
         st.stop()
 
-    selected_album = st.sidebar.selectbox(
-        "Choose an album",
-        list(album_map.keys())
-    )
+    selected_album = st.sidebar.selectbox("Choose an album", list(album_map.keys()))
 
     selected_release = album_map[selected_album]
-
 
     # ----------------------
     # SPOTIFY ALBUM
     # ----------------------
     try:
         spotify_album = search_album_spotify(
-            artist.get("name"),
-            selected_release.get("title")
+            artist.get("name"), selected_release.get("title")
         )
     except Exception as e:
         st.error(f"Spotify album error: {e}")
@@ -252,13 +210,11 @@ if artist_name:
     if spotify_album and spotify_album.get("images"):
         st.image(spotify_album["images"][0]["url"], width=300)
 
-
     # ======================
     # TRACKS
     # ======================
 
     tracks = get_album_tracks(selected_release["id"])
-
 
     selected_song = None
 
@@ -266,13 +222,9 @@ if artist_name:
 
         song_titles = [t["name"] for t in tracks]
 
-        selected_song = st.sidebar.selectbox(
-            "Choose a song",
-            song_titles
-        )
+        selected_song = st.sidebar.selectbox("Choose a song", song_titles)
 
         st.write(f"Selected Song: {selected_song}")
-
 
     # ======================
     # SONG DATA
@@ -280,17 +232,13 @@ if artist_name:
 
     if selected_song:
 
-        song_data = build_song_object(
-            artist.get("name"),
-            selected_song
-        )
+        song_data = build_song_object(artist.get("name"), selected_song)
 
         lyrics = song_data.get("lyrics")
         analytics = song_data.get("analytics")
         spotify = song_data.get("spotify")
 
         st.markdown("---")
-
 
         # ======================
         # SPOTIFY TRACK
@@ -316,10 +264,7 @@ if artist_name:
                 st.progress(popularity / 100)
 
                 if spotify.get("spotify_url"):
-                    st.markdown(
-                        f"[Open Track In Spotify]({spotify['spotify_url']})"
-                    )
-
+                    st.markdown(f"[Open Track In Spotify]({spotify['spotify_url']})")
 
         # ======================
         # LYRICS
@@ -331,7 +276,6 @@ if artist_name:
             st.text_area("Lyrics", lyrics, height=400)
         else:
             st.info("Lyrics not found.")
-
 
         # ======================
         # ANALYTICS
@@ -347,7 +291,6 @@ if artist_name:
             col2.metric("Unique Words", analytics["unique_words"])
             col3.metric("Vocabulary %", analytics["richness"])
 
-
             # ======================
             # WORD CLOUD
             # ======================
@@ -357,9 +300,7 @@ if artist_name:
             words = lyrics.split()
 
             wordcloud = WordCloud(
-                width=800,
-                height=400,
-                background_color="white"
+                width=800, height=400, background_color="white"
             ).generate(" ".join(words))
 
             fig_wc, ax_wc = plt.subplots()
