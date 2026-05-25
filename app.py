@@ -368,6 +368,8 @@ if artist_name:
 
             words = lyrics.split()
 
+            latin_words = [word for word in words if word.isascii()]
+
             wordcloud = WordCloud(
                 width=1600,
                 height=800,
@@ -375,16 +377,16 @@ if artist_name:
                 colormap="plasma",
                 max_words=250,
                 margin=40,
-            ).generate(" ".join(words))
+            ).generate(" ".join(latin_words))
 
             fig_wc, ax_wc = plt.subplots(figsize=(12, 6), facecolor=bg_color)
 
-        ax_wc.set_facecolor(plot_color)
+            ax_wc.set_facecolor(plot_color)
 
-        ax_wc.imshow(wordcloud, interpolation="bilinear")
+            ax_wc.imshow(wordcloud, interpolation="bilinear")
 
-        ax_wc.axis("off")
+            ax_wc.axis("off")
 
-        plt.tight_layout(pad=3)
+            plt.tight_layout(pad=3)
 
-        st.pyplot(fig_wc)
+            st.pyplot(fig_wc)
