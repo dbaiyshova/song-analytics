@@ -193,3 +193,101 @@ def search_album_spotify(
         )
 
         return None
+    
+
+
+def get_artist_by_name(artist_name):
+
+    sp = get_client()
+
+    results = sp.search(
+        q=artist_name,
+        type="artist",
+        limit=1
+    )
+
+    items = (
+        results.get(
+            "artists",
+            {}
+        ).get(
+            "items",
+            []
+        )
+    )
+
+    if not items:
+        return None
+
+    return items[0]
+
+
+# def get_artist_albums(
+#     artist_name
+# ):
+
+#     sp = get_client()
+
+#     results = sp.search(
+#         q=f"artist:{artist_name}",
+#         type="album",
+#         limit=50
+#     )
+
+#     albums = (
+#         results.get(
+#             "albums",
+#             {}
+#         ).get(
+#             "items",
+#             []
+#         )
+#     )
+
+#     unique = {}
+    
+#     for album in albums:
+
+#         name = album.get("name")
+
+#         if name not in unique:
+#             unique[name] = album
+
+#     return list(unique.values())
+
+def get_artist_albums(artist_name):
+
+    sp = get_client()
+
+    results = sp.search(
+        q=f"artist:{artist_name}",
+        type="album"
+    )
+
+    print(results)
+
+    return (
+        results.get(
+            "albums",
+            {}
+        ).get(
+            "items",
+            []
+        )
+    )
+
+
+def get_album_tracks(
+    album_id
+):
+
+    sp = get_client()
+
+    results = sp.album_tracks(
+        album_id
+    )
+
+    return results.get(
+        "items",
+        []
+    )

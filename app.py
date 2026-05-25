@@ -3,17 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-from src.musicbrainz_client import (
-    search_artist,
-    get_artist_releases,
-    get_release_tracks
-)
-
 from src.spotify_client import (
+    get_client,
+    get_artist_by_name,
+    get_artist_albums,
+    get_album_tracks,
     search_album_spotify
 )
 
-from src.spotify_client import get_client
 
 from src.song_service import build_song_object
 from src.analytics import get_artist_summary
@@ -119,14 +116,15 @@ if artist_name:
     # ----------------------
     # MUSICBRAINZ ARTIST
     # ----------------------
-    data = search_artist(artist_name)
-    artists = data.get("artists", [])
+    artist = get_artist_by_name(
+        artist_name
+    )
 
-    if not artists:
-        st.warning("No artists found.")
+    if not artist:
+        st.warning(
+            "No artists found."
+        )
         st.stop()
-
-    artist = artists[0]
 
 #temp s
     sp = get_client()
@@ -150,16 +148,18 @@ if artist_name:
     # RELEASES
     # ======================
 
-    artist_id = artist["id"]
+    releases = get_artist_albums(
+        artist["name"]
+    )
 
-    releases_data = get_artist_releases(artist_id)
-
-    releases = [
-        r for r in releases_data.get("releases", [])
-        if r.get("date")
-    ]
-
-    releases = sorted(releases, key=lambda x: x["date"])
+    releases = sorted(
+        releases,
+        key=lambda x: x.get(
+            "release_date",
+            ""
+        ),
+        reverse=True
+    )
 
 
     # ======================
@@ -188,8 +188,15 @@ if artist_name:
 
     if not df.empty:
 
-        df = df.dropna(subset=["date"])
-        df["year"] = df["date"].astype(str).str[:4]
+        df = df.dropna(
+            subset=["release_date"]
+        )
+
+        df["year"] = (
+            df["release_date"]
+            .astype(str)
+            .str[:4]
+        )
 
         year_counts = df["year"].value_counts().sort_index()
 
@@ -211,7 +218,10 @@ if artist_name:
     album_map = {}
 
     for release in releases:
-        label = f"{release.get('date')} | {release.get('title')}"
+        label = (
+            f"{release.get('release_date')} | "
+            f"{release.get('name')}"
+        )
         album_map[label] = release
 
     if not album_map:
@@ -247,17 +257,14 @@ if artist_name:
     # TRACKS
     # ======================
 
-    track_data = get_release_tracks(selected_release["id"])
-
-    media = track_data.get("media", [])
-    tracks = media[0].get("tracks", []) if media else []
+    tracks = get_album_tracks(selected_release["id"])
 
 
     selected_song = None
 
     if tracks:
 
-        song_titles = [t["title"] for t in tracks]
+        song_titles = [t["name"] for t in tracks]
 
         selected_song = st.sidebar.selectbox(
             "Choose a song",

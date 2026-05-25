@@ -99,16 +99,28 @@ def get_artist_summary(releases):
     if not releases:
         return None
 
-    total_albums = len(releases)
+    dates = []
 
-    dates = [
-        r.get("date")
-        for r in releases
-        if r.get("date")
-    ]
+    for release in releases:
+
+        release_date = (
+            release.get("date")
+            or release.get("release_date")
+        )
+
+        if release_date:
+            dates.append(release_date)
 
     return {
-        "total_albums": total_albums,
-        "oldest_release": min(dates),
-        "newest_release": max(dates)
+        "total_albums": len(releases),
+
+        "oldest_release":
+            min(dates)
+            if dates
+            else "Unknown",
+
+        "newest_release":
+            max(dates)
+            if dates
+            else "Unknown"
     }
