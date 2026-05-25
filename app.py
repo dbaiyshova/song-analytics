@@ -95,6 +95,12 @@ def render_artist_card(spotify_artist):
 # SIDEBAR
 # ======================
 
+
+bg_color = "#F5F6FA"
+plot_color = "#EBEDF1"
+text_color = "#1F2937"
+
+
 st.sidebar.header("Search")
 
 artist_name = st.sidebar.text_input("Artist name")
@@ -111,10 +117,7 @@ if artist_name:
         st.warning("No artists found.")
         st.stop()
 
-    # temp s
     sp = get_client()
-    st.write("Spotify client OK:", sp is not None)
-    # temp e
     # ----------------------
     # SPOTIFY ARTIST (SAFE)
     # ----------------------
@@ -161,17 +164,31 @@ if artist_name:
 
     if not df.empty:
 
-        df = df.dropna(subset=["release_date"])
+        date_column = "release_date" if "release_date" in df.columns else "date"
 
-        df["year"] = df["release_date"].astype(str).str[:4]
+        df = df.dropna(subset=[date_column])
+
+        df["year"] = df[date_column].astype(str).str[:4]
 
         year_counts = df["year"].value_counts().sort_index()
 
-        fig, ax = plt.subplots()
-        ax.plot(year_counts.index, year_counts.values, marker="o")
-        ax.set_title("Albums per Year")
-        ax.set_xlabel("Year")
-        ax.set_ylabel("Number of Albums")
+        fig, ax = plt.subplots(figsize=(10, 4), facecolor=bg_color)
+
+        ax.set_facecolor(plot_color)
+
+        ax.plot(year_counts.index, year_counts.values, marker="o", linewidth=2)
+
+        ax.set_title("Albums per Year", color=text_color)
+
+        ax.set_xlabel("Year", color=text_color)
+
+        ax.set_ylabel("Number of Albums", color=text_color)
+
+        ax.tick_params(colors=text_color)
+
+        for spine in ax.spines.values():
+            spine.set_color(text_color)
+        fig.tight_layout()
 
         st.pyplot(fig)
 
@@ -300,10 +317,12 @@ if artist_name:
             words = lyrics.split()
 
             wordcloud = WordCloud(
-                width=800, height=400, background_color="white"
+                width=800, height=400, background_color=plot_color
             ).generate(" ".join(words))
 
-            fig_wc, ax_wc = plt.subplots()
+            fig_wc, ax_wc = plt.subplots(facecolor=bg_color)
+
+            ax_wc.set_facecolor(plot_color)
 
             ax_wc.imshow(wordcloud, interpolation="bilinear")
             ax_wc.axis("off")
