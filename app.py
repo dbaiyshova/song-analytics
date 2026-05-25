@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.express as px
 
 
 from src.spotify_client import (
@@ -13,10 +14,11 @@ from src.spotify_client import (
 
 
 from src.song_service import build_song_object
-from src.analytics import get_artist_summary
 from src.spotify_artist_client import search_artist_spotify
 
 from wordcloud import WordCloud
+
+from src.analytics import get_artist_summary, get_top_words
 
 # ======================
 # PAGE CONFIG
@@ -24,6 +26,23 @@ from wordcloud import WordCloud
 
 st.set_page_config(page_title="Song Analytics", page_icon="🎵", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    textarea {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+        border-radius: 12px !important;
+    }}
+
+    div[data-testid="stTextArea"] textarea {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ======================
 # AUTH
@@ -96,10 +115,10 @@ def render_artist_card(spotify_artist):
 # ======================
 
 
-bg_color = "#F5F6FA"
-plot_color = "#EBEDF1"
+plot_color = "#F1EEFF"
+bg_color = "#F8F7FF"
 text_color = "#1F2937"
-
+accent_color = "#530FE6"
 
 st.sidebar.header("Search")
 
@@ -196,8 +215,6 @@ if artist_name:
     # ALBUM SELECT
     # ======================
 
-    st.subheader("Album Selection")
-
     album_map = {}
 
     for release in releases:
@@ -210,22 +227,6 @@ if artist_name:
     selected_album = st.sidebar.selectbox("Choose an album", list(album_map.keys()))
 
     selected_release = album_map[selected_album]
-
-    # ----------------------
-    # SPOTIFY ALBUM
-    # ----------------------
-    try:
-        spotify_album = search_album_spotify(
-            artist.get("name"), selected_release.get("title")
-        )
-    except Exception as e:
-        st.error(f"Spotify album error: {e}")
-        spotify_album = None
-
-    st.write("Spotify album loaded:", spotify_album is not None)
-
-    if spotify_album and spotify_album.get("images"):
-        st.image(spotify_album["images"][0]["url"], width=300)
 
     # ======================
     # TRACKS
@@ -240,8 +241,6 @@ if artist_name:
         song_titles = [t["name"] for t in tracks]
 
         selected_song = st.sidebar.selectbox("Choose a song", song_titles)
-
-        st.write(f"Selected Song: {selected_song}")
 
     # ======================
     # SONG DATA
@@ -284,15 +283,45 @@ if artist_name:
                     st.markdown(f"[Open Track In Spotify]({spotify['spotify_url']})")
 
         # ======================
-        # LYRICS
+        # ALBUM + LYRICS
         # ======================
 
-        st.subheader("Lyrics")
+        col1, col2 = st.columns([1, 2])
 
-        if lyrics:
-            st.text_area("Lyrics", lyrics, height=400)
-        else:
-            st.info("Lyrics not found.")
+        with col1:
+
+            st.subheader("💿 Album")
+
+            if selected_release.get("images"):
+
+                st.image(selected_release["images"][0]["url"], width=300)
+
+        with col2:
+
+            st.subheader("📝 Lyrics")
+
+            if lyrics:
+
+                st.markdown(
+                    f"""
+                    <div style="
+                        background:{bg_color};
+                        color:{text_color};
+                        padding:20px;
+                        border-radius:12px;
+                        height:420px;
+                        overflow-y:auto;
+                        white-space:pre-wrap;
+                        word-wrap:break-word;
+                        overflow-wrap:break-word;
+                        border:1px solid #D8DCE6;
+                    ">{lyrics}</div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            else:
+                st.info("Lyrics not found.")
 
         # ======================
         # ANALYTICS
@@ -308,6 +337,29 @@ if artist_name:
             col2.metric("Unique Words", analytics["unique_words"])
             col3.metric("Vocabulary %", analytics["richness"])
 
+            top_words = get_top_words(lyrics, limit=15)
+
+            if top_words:
+
+                st.subheader("Top Words")
+
+                df_words = pd.DataFrame(top_words, columns=["Word", "Count"])
+
+                fig = px.bar(
+                    df_words,
+                    x="Count",
+                    y="Word",
+                    orientation="h",
+                    text="Count",
+                    title="Most Frequent Words",
+                )
+
+                fig.update_layout(
+                    yaxis=dict(categoryorder="total ascending"), height=500
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
             # ======================
             # WORD CLOUD
             # ======================
@@ -317,14 +369,22 @@ if artist_name:
             words = lyrics.split()
 
             wordcloud = WordCloud(
-                width=800, height=400, background_color=plot_color
+                width=1600,
+                height=800,
+                background_color=plot_color,
+                colormap="plasma",
+                max_words=250,
+                margin=40,
             ).generate(" ".join(words))
 
-            fig_wc, ax_wc = plt.subplots(facecolor=bg_color)
+            fig_wc, ax_wc = plt.subplots(figsize=(12, 6), facecolor=bg_color)
 
-            ax_wc.set_facecolor(plot_color)
+        ax_wc.set_facecolor(plot_color)
 
-            ax_wc.imshow(wordcloud, interpolation="bilinear")
-            ax_wc.axis("off")
+        ax_wc.imshow(wordcloud, interpolation="bilinear")
 
-            st.pyplot(fig_wc)
+        ax_wc.axis("off")
+
+        plt.tight_layout(pad=3)
+
+        st.pyplot(fig_wc)
