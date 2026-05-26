@@ -12,6 +12,8 @@ from src.spotify_client import (
     search_album_spotify,
 )
 
+from src.lastfm import clean_lastfm_tags, get_artist_tags, get_artist_info
+
 
 from src.song_service import build_song_object
 from src.spotify_artist_client import search_artist_spotify
@@ -23,6 +25,22 @@ from src.analytics import get_artist_summary, get_top_words
 # ======================
 # PAGE CONFIG
 # ======================
+
+
+def format_number(n):
+    n = int(n)
+
+    if n >= 1_000_000_000:
+        return f"{n/1_000_000_000:.1f}B"
+
+    if n >= 1_000_000:
+        return f"{n/1_000_000:.1f}M"
+
+    if n >= 1_000:
+        return f"{n/1_000:.1f}K"
+
+    return str(n)
+
 
 st.set_page_config(page_title="Song Analytics", page_icon="🎵", layout="wide")
 
@@ -82,33 +100,6 @@ def render_artist_card(spotify_artist):
     if not spotify_artist:
         return
 
-    st.subheader("🎧 Spotify Artist Profile")
-
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        if spotify_artist.get("image"):
-            st.image(spotify_artist["image"], width=250)
-
-    with col2:
-
-        st.markdown(f"## {spotify_artist.get('name', 'Unknown')}")
-
-        st.write(f"**Followers:** {spotify_artist.get('followers', 0):,}")
-
-        popularity = spotify_artist.get("popularity", 0)
-
-        st.write(f"**Popularity:** {popularity}/100")
-        st.progress(popularity / 100)
-
-        genres = spotify_artist.get("genres", [])
-        if genres:
-            st.write("**Genres:** " + ", ".join(genres[:5]))
-
-        url = spotify_artist.get("spotify_url")
-        if url:
-            st.markdown(f"[Open Artist In Spotify]({url})")
-
 
 # ======================
 # SIDEBAR
@@ -122,10 +113,26 @@ accent_color = "#530FE6"
 
 st.sidebar.header("Search")
 
+dashboard = st.sidebar.radio(
+    "Dashboard",
+    [
+        "Artist Profile",
+        "Music Overview",
+    ],
+)
+
 artist_name = st.sidebar.text_input("Artist name")
 
 
-if artist_name:
+if dashboard == "Music Overview":
+
+    st.header("Spotify Music Overview")
+
+    st.info("Coming soon")
+
+    st.stop()
+
+if dashboard == "Artist Profile" and artist_name:
 
     # ----------------------
     # MUSICBRAINZ ARTIST
@@ -148,6 +155,10 @@ if artist_name:
 
     st.write("Spotify artist loaded:", spotify_artist is not None)
 
+    tags = clean_lastfm_tags(
+        get_artist_tags(spotify_artist["name"]), spotify_artist["name"]
+    )
+
     render_artist_card(spotify_artist)
 
     # ======================
@@ -159,19 +170,106 @@ if artist_name:
     releases = sorted(releases, key=lambda x: x.get("release_date", ""), reverse=True)
 
     # ======================
-    # SUMMARY
+    # ARTIST DASHBOARD
     # ======================
 
     summary = get_artist_summary(releases)
 
-    if summary:
-        st.subheader("Artist Overview")
+    lastfm_artist = get_artist_info(spotify_artist["name"])
 
-        col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns([1.1, 0.8, 1.1])
+    st.markdown(
+        """
+    <style>
 
-        col1.metric("Total Albums", summary["total_albums"])
-        col2.metric("Oldest Release", summary["oldest_release"])
-        col3.metric("Newest Release", summary["newest_release"])
+    div[data-testid="stMetricValue"] {
+        font-size: 2rem;
+    }
+
+    div[data-testid="stMetricLabel"] {
+        font-size: 0.9rem;
+    }
+
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    with col1:
+
+        if spotify_artist and spotify_artist.get("image"):
+            st.image(spotify_artist["image"], use_container_width=True)
+
+    with col2:
+
+        st.markdown(f"### {spotify_artist['name']}")
+
+        st.link_button(
+            "Open on Spotify",
+            spotify_artist["spotify_url"],
+            use_container_width=True,
+        )
+        m1, m2 = st.columns(2)
+
+        with m1:
+            st.metric(
+                "Albums",
+                summary["total_albums"],
+            )
+
+        with m2:
+            st.metric(
+                "Tracks",
+                summary["total_tracks"],
+            )
+
+    with col3:
+
+        if tags:
+
+            df = pd.DataFrame(tags)
+
+            df = df.rename(
+                columns={
+                    "name": "Genre",
+                    "count": "Tag Count",
+                }
+            )
+
+            fig = px.pie(
+                df,
+                names="Genre",
+                values="Tag Count",
+                hole=0.4,
+                title="Genres",
+            )
+
+            fig.update_layout(
+                title={
+                    "text": "Genres",
+                },
+                # font={
+                #     "size": 14,
+                # },
+                legend=dict(
+                    orientation="h",
+                    y=-0.15,
+                    x=0.5,
+                    xanchor="center",
+                ),
+                margin=dict(
+                    l=0,
+                    r=0,
+                    t=40,
+                    b=0,
+                ),
+                height=320,
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        else:
+            st.write("No genre data available")
 
     # ======================
     # TIMELINE

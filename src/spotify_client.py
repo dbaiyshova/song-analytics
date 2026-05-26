@@ -1,4 +1,5 @@
 import os
+import requests
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -124,40 +125,6 @@ def get_artist_by_name(artist_name):
         return None
 
     return items[0]
-
-
-# def get_artist_albums(
-#     artist_name
-# ):
-
-#     sp = get_client()
-
-#     results = sp.search(
-#         q=f"artist:{artist_name}",
-#         type="album",
-#         limit=50
-#     )
-
-#     albums = (
-#         results.get(
-#             "albums",
-#             {}
-#         ).get(
-#             "items",
-#             []
-#         )
-#     )
-
-#     unique = {}
-
-#     for album in albums:
-
-#         name = album.get("name")
-
-#         if name not in unique:
-#             unique[name] = album
-
-#     return list(unique.values())
 
 
 def get_artist_albums(artist_name):
