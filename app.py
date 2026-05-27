@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
+import asyncio
+import aiohttp
 
 
 from src.spotify_client import (
@@ -130,6 +132,40 @@ dashboard = st.sidebar.radio(
 artist_name = st.sidebar.text_input("Artist name")
 
 
+async def fetch_track_data(track):
+
+    loop = asyncio.get_event_loop()
+
+    spotify_track = await loop.run_in_executor(
+        None,
+        lambda: search_track_spotify(
+            track["name"],
+            track["artist"]["name"],
+        ),
+    )
+
+    if not spotify_track:
+        return None
+
+    release_date = spotify_track.get("release_date")
+
+    return {
+        "track": track["name"],
+        "artist": track["artist"]["name"],
+        "year": release_date[:4] if release_date else None,
+        "genres": spotify_track.get("genres", []),
+    }
+
+
+async def load_tracks_async(top_tracks):
+
+    tasks = [fetch_track_data(track) for track in top_tracks]
+
+    results = await asyncio.gather(*tasks)
+
+    return [r for r in results if r]
+
+
 if dashboard == "Music Overview":
 
     # ======================
@@ -183,27 +219,66 @@ if dashboard == "Music Overview":
     # TOP SONGS OVER YEAERS
     # ======================
 
-    # top_tracks = get_top_tracks()
+    @st.cache_data(show_spinner=False)
+    def get_track_release_year(track_name, artist_name):
 
-    # years = []
+        spotify_track = search_track_spotify(
+            track_name,
+            artist_name,
+        )
 
-    # for track in top_tracks:
+        if not spotify_track:
+            return None
 
-    #     spotify_track = search_track_spotify(
-    #         track["name"],
-    #         track["artist"]["name"],
-    #     )
+        release_date = spotify_track.get("release_date")
 
-    #     if spotify_track:
-    #         years.append(spotify_track["release_date"][:4])
+        if not release_date:
+            return None
 
-    # df_years = pd.DataFrame({"Year": years})
+        return {
+            "track": track_name,
+            "artist": artist_name,
+            "year": release_date[:4],
+        }
 
-    # df_years = (
-    #     df_years.groupby("Year").size().reset_index(name="Tracks").sort_values("Year")
-    # )
+    top_tracks = get_top_tracks()
 
-    # st.dataframe(df_years)
+    with st.spinner("Loading tracks..."):
+
+        track_data = asyncio.run(load_tracks_async(top_tracks))
+
+    df_tracks = pd.DataFrame(track_data)
+
+    df_years = (
+        df_tracks.groupby("year").size().reset_index(name="Tracks").sort_values("year")
+    )
+
+    fig_years = px.line(
+        df_years,
+        x="year",
+        y="Tracks",
+        markers=True,
+        title="Top Tracks by Release Year",
+    )
+
+    st.plotly_chart(
+        fig_years,
+        use_container_width=True,
+    )
+
+    st.subheader("Tracks")
+
+    st.dataframe(
+        df_tracks.rename(
+            columns={
+                "track": "Track",
+                "artist": "Artist",
+                "year": "Year",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 if dashboard == "Artist Profile" and artist_name:
 
