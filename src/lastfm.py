@@ -27,16 +27,15 @@ def get_artist_tags(artist_name):
     return data.get("toptags", {}).get("tag", [])
 
 
-def clean_lastfm_tags(tags, artist_name):
+def clean_lastfm_tags(tags):
 
     merged = {}
-
-    # normalize artist name
-    artist_name = re.sub(r"[-_/ ]+", "", artist_name.lower().strip())
 
     genre_roots = {
         "pop",
         "rock",
+        "indie rock",
+        "indie",
         "metal",
         "hiphop",
         "rap",
@@ -59,6 +58,13 @@ def clean_lastfm_tags(tags, artist_name):
         "kpop",
         "jpop",
         "cpop",
+        "ambient",
+        "classic rock",
+        "classical",
+        "edm",
+        "dubstep",
+        "instrumental",
+        "latin",
     }
 
     for tag in tags:
@@ -68,10 +74,6 @@ def clean_lastfm_tags(tags, artist_name):
 
         # normalize → remove separators
         name = re.sub(r"[-_/ ]+", "", name)
-
-        # remove artist name itself
-        if name == artist_name:
-            continue
 
         # keep only genre-like tags
         if not any(root in name for root in genre_roots):
@@ -114,3 +116,41 @@ def get_artist_info(artist_name):
     data = response.json()
 
     return data.get("artist", {})
+
+
+def get_top_tags():
+
+    api_key = os.getenv("LASTFM_API_KEY")
+
+    response = requests.get(
+        "https://ws.audioscrobbler.com/2.0/",
+        params={
+            "method": "tag.getTopTags",
+            "api_key": api_key,
+            "format": "json",
+        },
+        timeout=10,
+    )
+
+    data = response.json()
+
+    return data.get("toptags", {}).get("tag", [])
+
+
+def get_top_tracks():
+
+    api_key = os.getenv("LASTFM_API_KEY")
+
+    response = requests.get(
+        "https://ws.audioscrobbler.com/2.0/",
+        params={
+            "method": "chart.gettoptracks",
+            "api_key": api_key,
+            "format": "json",
+        },
+        timeout=10,
+    )
+
+    data = response.json()
+
+    return data.get("tracks", {}).get("track", [])

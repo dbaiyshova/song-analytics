@@ -9,10 +9,16 @@ from src.spotify_client import (
     get_artist_by_name,
     get_artist_albums,
     get_album_tracks,
-    search_album_spotify,
+    search_track_spotify,
 )
 
-from src.lastfm import clean_lastfm_tags, get_artist_tags, get_artist_info
+from src.lastfm import (
+    clean_lastfm_tags,
+    get_artist_tags,
+    get_artist_info,
+    get_top_tags,
+    get_top_tracks,
+)
 
 
 from src.song_service import build_song_object
@@ -126,11 +132,78 @@ artist_name = st.sidebar.text_input("Artist name")
 
 if dashboard == "Music Overview":
 
-    st.header("Spotify Music Overview")
+    # ======================
+    # TOP GENRES PIE CHART
+    # ======================
 
-    st.info("Coming soon")
+    st.header("Top Music Overview")
 
-    st.stop()
+    tags = clean_lastfm_tags(
+        get_top_tags(),
+    )
+
+    df = pd.DataFrame(tags)
+
+    df["count"] = pd.to_numeric(
+        df["count"],
+        errors="coerce",
+    )
+
+    df = df.rename(
+        columns={
+            "name": "Genre",
+            "count": "Tag Count",
+        }
+    )
+
+    fig = px.pie(
+        df,
+        names="Genre",
+        values="Tag Count",
+        hole=0.4,
+        title="Top Genres",
+    )
+
+    fig.update_layout(
+        legend=dict(
+            orientation="h",
+            y=-0.15,
+            x=0.5,
+            xanchor="center",
+        ),
+        height=500,
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+    )
+
+    # ======================
+    # TOP SONGS OVER YEAERS
+    # ======================
+
+    # top_tracks = get_top_tracks()
+
+    # years = []
+
+    # for track in top_tracks:
+
+    #     spotify_track = search_track_spotify(
+    #         track["name"],
+    #         track["artist"]["name"],
+    #     )
+
+    #     if spotify_track:
+    #         years.append(spotify_track["release_date"][:4])
+
+    # df_years = pd.DataFrame({"Year": years})
+
+    # df_years = (
+    #     df_years.groupby("Year").size().reset_index(name="Tracks").sort_values("Year")
+    # )
+
+    # st.dataframe(df_years)
 
 if dashboard == "Artist Profile" and artist_name:
 
@@ -155,9 +228,7 @@ if dashboard == "Artist Profile" and artist_name:
 
     st.write("Spotify artist loaded:", spotify_artist is not None)
 
-    tags = clean_lastfm_tags(
-        get_artist_tags(spotify_artist["name"]), spotify_artist["name"]
-    )
+    tags = clean_lastfm_tags(get_artist_tags(spotify_artist["name"]))
 
     render_artist_card(spotify_artist)
 

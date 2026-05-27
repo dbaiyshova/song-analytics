@@ -145,3 +145,27 @@ def get_album_tracks(album_id):
     results = sp.album_tracks(album_id)
 
     return results.get("items", [])
+
+
+def search_track_spotify(track_name, artist_name):
+
+    sp = get_client()
+
+    result = sp.search(
+        q=f"track:{track_name} artist:{artist_name}",
+        type="track",
+        limit=1,
+    )
+
+    items = result.get("tracks", {}).get("items", [])
+
+    if not items:
+        return None
+
+    track = items[0]
+
+    return {
+        "name": track["name"],
+        "album": track["album"]["name"],
+        "release_date": track["album"]["release_date"],
+    }
