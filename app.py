@@ -219,66 +219,57 @@ if dashboard == "Music Overview":
     # TOP SONGS OVER YEAERS
     # ======================
 
-    @st.cache_data(show_spinner=False)
-    def get_track_release_year(track_name, artist_name):
-
-        spotify_track = search_track_spotify(
-            track_name,
-            artist_name,
-        )
-
-        if not spotify_track:
-            return None
-
-        release_date = spotify_track.get("release_date")
-
-        if not release_date:
-            return None
-
-        return {
-            "track": track_name,
-            "artist": artist_name,
-            "year": release_date[:4],
-        }
-
     top_tracks = get_top_tracks()
 
     with st.spinner("Loading tracks..."):
 
         track_data = asyncio.run(load_tracks_async(top_tracks))
 
-    df_tracks = pd.DataFrame(track_data)
+        df_tracks = pd.DataFrame(track_data)
 
-    df_years = (
-        df_tracks.groupby("year").size().reset_index(name="Tracks").sort_values("year")
-    )
+        df_years = (
+            df_tracks.groupby("year")
+            .size()
+            .reset_index(name="Tracks")
+            .sort_values("year")
+        )
 
-    fig_years = px.line(
-        df_years,
-        x="year",
-        y="Tracks",
-        markers=True,
-        title="Top Tracks by Release Year",
-    )
+        fig_years = px.bar(
+            df_years,
+            x="Tracks",
+            y="year",
+            orientation="h",
+            title="Top Tracks by Release Year",
+            text="Tracks",
+        )
 
-    st.plotly_chart(
-        fig_years,
-        use_container_width=True,
-    )
+        fig_years.update_layout(
+            height=500,
+            yaxis_title="",
+            xaxis_title="Tracks",
+            yaxis=dict(categoryorder="total ascending"),
+            tickmode="linear",
+            dtick=1,
+        )
 
-    st.subheader("Tracks")
+        st.plotly_chart(
+            fig_years,
+            use_container_width=True,
+        )
 
-    st.dataframe(
-        df_tracks.rename(
-            columns={
-                "track": "Track",
-                "artist": "Artist",
-                "year": "Year",
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
+        st.subheader("Tracks")
+
+        st.dataframe(
+            df_tracks.rename(
+                columns={
+                    "track": "Track",
+                    "artist": "Artist",
+                    "year": "Year",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 if dashboard == "Artist Profile" and artist_name:
 
