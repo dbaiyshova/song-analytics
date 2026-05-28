@@ -248,8 +248,11 @@ if dashboard == "Music Overview":
             yaxis_title="",
             xaxis_title="Tracks",
             yaxis=dict(categoryorder="total ascending"),
+        )
+
+        fig_years.update_yaxes(
             tickmode="linear",
-            dtick=1,
+            dtick=2,
         )
 
         st.plotly_chart(
