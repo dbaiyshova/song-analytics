@@ -202,10 +202,10 @@ if dashboard == "Music Overview":
 
     fig.update_layout(
         legend=dict(
-            orientation="h",
-            y=-0.15,
-            x=0.5,
-            xanchor="center",
+            orientation="v",
+            y=0.5,
+            x=1.02,
+            yanchor="middle",
         ),
         height=500,
     )

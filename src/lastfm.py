@@ -1,6 +1,7 @@
 import os
 import requests
 import re
+import streamlit as st
 
 
 def get_artist_tags(artist_name):
