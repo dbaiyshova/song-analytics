@@ -342,7 +342,10 @@ if dashboard == "Artist Profile" and artist_name:
     # RELEASES
     # ======================
 
-    releases = get_artist_albums(artist["name"])
+    releases = get_artist_albums(
+        artist["name"],
+        artist["id"],
+    )
 
     releases = sorted(releases, key=lambda x: x.get("release_date", ""), reverse=True)
 
@@ -489,10 +492,6 @@ if dashboard == "Artist Profile" and artist_name:
     # ======================
     # ALBUM TIMELINE
     # ======================
-
-    st.write(
-        pd.DataFrame(releases)[["name", "release_date"]].sort_values("release_date")
-    )
 
     st.subheader("Album Timeline")
 

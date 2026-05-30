@@ -123,7 +123,46 @@ def get_artist_by_name(artist_name):
     return items[0]
 
 
-def get_artist_albums(artist_name):
+# def get_artist_albums(artist_name):
+
+#     sp = get_client()
+
+#     results = sp.search(
+#         q=f"artist:{artist_name}",
+#         type="album",
+#     )
+
+#     albums = results["albums"]["items"]
+
+#     while results["albums"]["next"]:
+
+#         results = sp.next(results["albums"])
+
+#         albums.extend(results["albums"]["items"])
+
+#     filtered_albums = []
+
+#     for album in albums:
+
+#         artists = album.get("artists", [])
+
+#         if not artists:
+#             continue
+
+#         if artists[0]["name"].lower() != artist_name.lower():
+#             continue
+
+#         if album.get("album_type") != "album":
+#             continue
+
+#         filtered_albums.append(album)
+
+#     print("TOTAL:", len(filtered_albums))
+
+#     return filtered_albums
+
+
+def get_artist_albums(artist_name, artist_id):
 
     sp = get_client()
 
@@ -140,6 +179,7 @@ def get_artist_albums(artist_name):
 
         albums.extend(results["albums"]["items"])
 
+    # keep only real albums by the artist
     filtered_albums = []
 
     for album in albums:
@@ -149,17 +189,39 @@ def get_artist_albums(artist_name):
         if not artists:
             continue
 
-        if artists[0]["name"].lower() != artist_name.lower():
+        # verify artist by Spotify ID
+        if artists[0]["id"] != artist_id:
             continue
 
+        # keep only albums
         if album.get("album_type") != "album":
             continue
 
         filtered_albums.append(album)
 
-    print("TOTAL:", len(filtered_albums))
+    # remove duplicate album versions
+    album_map = {}
 
-    return filtered_albums
+    for album in filtered_albums:
+
+        key = album["name"].lower().strip()
+
+        if (
+            key not in album_map
+            or album["release_date"] < album_map[key]["release_date"]
+        ):
+            album_map[key] = album
+
+    unique_albums = list(album_map.values())
+
+    unique_albums.sort(
+        key=lambda x: x.get("release_date", ""),
+        reverse=True,
+    )
+
+    print("Albums fetched:", len(unique_albums))
+
+    return unique_albums
 
 
 def get_album_tracks(album_id):
