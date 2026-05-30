@@ -27,10 +27,6 @@ def get_client():
 
     client_secret = os.getenv("SPOTIPY_CLIENT_SECRET", "").strip()
 
-    print("CLIENT ID START:", client_id[:8])
-
-    print("CLIENT SECRET EXISTS:", bool(client_secret))
-
     if not client_id:
         raise ValueError("SPOTIPY_CLIENT_ID not found")
 
@@ -132,8 +128,6 @@ def get_artist_albums(artist_name):
     sp = get_client()
 
     results = sp.search(q=f"artist:{artist_name}", type="album")
-
-    print(results)
 
     return results.get("albums", {}).get("items", [])
 

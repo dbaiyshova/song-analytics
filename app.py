@@ -159,11 +159,14 @@ async def fetch_track_data(track):
 
 async def load_tracks_async(top_tracks):
 
-    tasks = [fetch_track_data(track) for track in top_tracks]
+    semaphore = asyncio.Semaphore(5)
 
-    results = await asyncio.gather(*tasks)
+    async with semaphore:
+        tasks = [fetch_track_data(track) for track in top_tracks]
 
-    return [r for r in results if r]
+        results = await asyncio.gather(*tasks)
+
+        return [r for r in results if r]
 
 
 if dashboard == "Music Overview":
@@ -445,9 +448,51 @@ if dashboard == "Artist Profile" and artist_name:
         else:
             st.write("No genre data available")
 
+    # # ======================
+    # # TIMELINE
+    # # ======================
+
+    # st.subheader("Album Timeline")
+
+    # df = pd.DataFrame(releases)
+
+    # if not df.empty:
+
+    #     date_column = "release_date" if "release_date" in df.columns else "date"
+
+    #     df = df.dropna(subset=[date_column])
+
+    #     df["year"] = df[date_column].astype(str).str[:4]
+
+    #     year_counts = df["year"].value_counts().sort_index()
+
+    #     fig, ax = plt.subplots(figsize=(10, 4), facecolor=bg_color)
+
+    #     ax.set_facecolor(plot_color)
+
+    #     ax.plot(year_counts.index, year_counts.values, marker="o", linewidth=2)
+
+    #     ax.set_title("Albums per Year", color=text_color)
+
+    #     ax.set_xlabel("Year", color=text_color)
+
+    #     ax.set_ylabel("Number of Albums", color=text_color)
+
+    #     ax.tick_params(colors=text_color)
+
+    #     for spine in ax.spines.values():
+    #         spine.set_color(text_color)
+    #     fig.tight_layout()
+
+    #     st.pyplot(fig)
+
     # ======================
-    # TIMELINE
+    # ALBUM TIMELINE
     # ======================
+
+    st.write(
+        pd.DataFrame(releases)[["name", "release_date"]].sort_values("release_date")
+    )
 
     st.subheader("Album Timeline")
 
@@ -459,29 +504,73 @@ if dashboard == "Artist Profile" and artist_name:
 
         df = df.dropna(subset=[date_column])
 
-        df["year"] = df[date_column].astype(str).str[:4]
+        albums_by_year = {}
 
-        year_counts = df["year"].value_counts().sort_index()
+        for release in releases:
 
-        fig, ax = plt.subplots(figsize=(10, 4), facecolor=bg_color)
+            release_date = release.get(date_column)
 
-        ax.set_facecolor(plot_color)
+            if not release_date:
+                continue
 
-        ax.plot(year_counts.index, year_counts.values, marker="o", linewidth=2)
+            year = str(release_date)[:4]
 
-        ax.set_title("Albums per Year", color=text_color)
+            albums_by_year.setdefault(year, []).append(release)
 
-        ax.set_xlabel("Year", color=text_color)
+        years = sorted(albums_by_year.keys())
 
-        ax.set_ylabel("Number of Albums", color=text_color)
+        cols = st.columns(len(years))
 
-        ax.tick_params(colors=text_color)
+        for i, year in enumerate(years):
 
-        for spine in ax.spines.values():
-            spine.set_color(text_color)
-        fig.tight_layout()
+            albums = albums_by_year[year]
 
-        st.pyplot(fig)
+            with cols[i]:
+
+                # stack covers vertically
+                for album in albums:
+
+                    image_url = None
+
+                    if album.get("images"):
+                        image_url = album["images"][0]["url"]
+
+                    # if image_url:
+                    #     st.image(
+                    #         image_url,
+                    #         width=60,
+                    #     )
+
+                    if image_url:
+
+                        st.markdown(
+                            f"""
+                            <img
+                                src="{image_url}"
+                                title="{album.get('name')}\nReleased: {album.get('release_date')}"
+                                style="
+                                    width:60px;
+                                    border-radius:6px;
+                                    margin-bottom:4px;
+                                "
+                            >
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+                st.markdown(
+                    f"""
+                    <div style="
+                        text-align:center;
+                        margin-top:10px;
+                        color:#1F2937;
+                        font-weight:600;
+                    ">
+                        {year}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
     # ======================
     # ALBUM SELECT
