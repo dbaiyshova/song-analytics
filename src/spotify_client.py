@@ -151,7 +151,7 @@ def get_artist_albums(artist_name, artist_id):
             continue
 
         # verify artist by Spotify ID
-        if artists[0]["id"] != artist_id:
+        if artist_id not in [a["id"] for a in artists]:
             continue
 
         # keep only albums

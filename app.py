@@ -118,7 +118,7 @@ bg_color = "#F8F7FF"
 text_color = "#1F2937"
 accent_color = "#530FE6"
 
-st.write("DEPLOY CHECK 2026-05-30-01")
+st.write("DEPLOY CHECK 2026-05-30-02")
 
 dashboard = st.sidebar.radio(
     "Dashboard",
