@@ -123,45 +123,6 @@ def get_artist_by_name(artist_name):
     return items[0]
 
 
-# def get_artist_albums(artist_name):
-
-#     sp = get_client()
-
-#     results = sp.search(
-#         q=f"artist:{artist_name}",
-#         type="album",
-#     )
-
-#     albums = results["albums"]["items"]
-
-#     while results["albums"]["next"]:
-
-#         results = sp.next(results["albums"])
-
-#         albums.extend(results["albums"]["items"])
-
-#     filtered_albums = []
-
-#     for album in albums:
-
-#         artists = album.get("artists", [])
-
-#         if not artists:
-#             continue
-
-#         if artists[0]["name"].lower() != artist_name.lower():
-#             continue
-
-#         if album.get("album_type") != "album":
-#             continue
-
-#         filtered_albums.append(album)
-
-#     print("TOTAL:", len(filtered_albums))
-
-#     return filtered_albums
-
-
 def get_artist_albums(artist_name, artist_id):
 
     sp = get_client()
