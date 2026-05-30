@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 import asyncio
-import aiohttp
 
 
 from src.spotify_client import (
@@ -119,8 +118,6 @@ bg_color = "#F8F7FF"
 text_color = "#1F2937"
 accent_color = "#530FE6"
 
-st.sidebar.header("Search")
-
 dashboard = st.sidebar.radio(
     "Dashboard",
     [
@@ -128,6 +125,8 @@ dashboard = st.sidebar.radio(
         "Music Overview",
     ],
 )
+
+st.sidebar.header("Search")
 
 artist_name = st.sidebar.text_input("Artist name")
 
